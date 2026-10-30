@@ -10,16 +10,11 @@ jobs:
       pull-requests: read
     steps:
       - name: query non-collaborator
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set +e
           gh api "repos/${{ github.repository }}/collaborators/lazyhacker6/permission" > /tmp/out.json 2>/tmp/err.txt
           echo "exit=$?"
           echo "--- body ---"; cat /tmp/out.json
           echo "--- err ---"; cat /tmp/err.txt
-      - name: query write user (token owner actor)
-        run: |
-          set +e
-          gh api "repos/${{ github.repository }}/collaborators/Ety60/permission"
-          echo "exit=$?"
-        env:
-          GH_TOKEN: ${{ github.token }}
