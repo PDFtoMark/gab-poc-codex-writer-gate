@@ -1,0 +1,46 @@
+name: Codex PR Review
+
+# Minimal reproduction of trailofbits/skills codex-review.yml prepare gate.
+on: # zizmor: ignore[dangerous-triggers]
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, labeled]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+jobs:
+  prepare:
+    name: Prepare review
+    if: >-
+      (github.event_name == 'pull_request_target'
+       && github.event.pull_request.draft == false
+       && github.event.pull_request.head.repo.fork == false
+       && github.event.pull_request.head.repo.full_name == github.repository
+       && (github.event.action != 'labeled' || github.event.label.name == 'deep-review'))
+      || (github.event_name == 'issue_comment' && github.event.issue.pull_request
+          && github.event.comment.body == '@codex review')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ready: ${{ steps.prepare.outputs.ready }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/codex_review.py prepare
+  report:
+    name: Report gate
+    needs: prepare
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ready=${{ needs.prepare.outputs.ready }} prepare_result=${{ needs.prepare.result }}"
